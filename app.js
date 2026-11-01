@@ -2,7 +2,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const colors = ['#e3eacb', '#f1c6b7', '#cbdde9', '#e3d3eb', '#f1dfa7', '#d5e5dc'];
-  const key = 'ga2-little-connections-v1';
+  const key = document.body.dataset.storageKey || 'ga2-little-connections-v1';
   const radius = 82;
   let state = { version: 1, title: 'untitled possibilities', nodes: [], edges: [] };
   let view = { x: 0, y: 0, scale: 1 };
@@ -350,12 +350,16 @@
   $('confirm-open').onclick = () => { $('confirm-dialog').close(); finishImport(); };
   $('confirm-dialog').addEventListener('cancel', () => { pendingImport = null; });
   window.addEventListener('pagehide', persist);
+  let fitInitialMap = false;
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(key) || $('initial-map')?.textContent;
+    fitInitialMap = !!raw && !localStorage.getItem(key) && !!$('initial-map');
     if (raw) {
       const saved = JSON.parse(raw); state = validate(saved);
       if (saved.view && Number.isFinite(saved.view.x) && Number.isFinite(saved.view.y) && Number.isFinite(saved.view.scale) && saved.view.scale >= .001 && saved.view.scale <= 2) view = { x: saved.view.x, y: saved.view.y, scale: saved.view.scale };
     }
   } catch { notify('couldn’t restore the saved map. open a downloaded copy if you have one.'); }
-  render(); commit();
+  render();
+  if (fitInitialMap) fit();
+  commit();
 })();
