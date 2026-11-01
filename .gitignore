@@ -1,0 +1,18 @@
+# local tools and generated output
+node_modules/
+tmp/
+.local/
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# local configuration
+.env
+.env.*
+!.env.example
+
+# private coursework and imported personal maps
+20-ideas.json
+20-ideas-preview.html
+maps/
