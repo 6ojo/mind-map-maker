@@ -4,6 +4,8 @@
   const colors = ['#e3eacb', '#f1c6b7', '#cbdde9', '#e3d3eb', '#f1dfa7', '#d5e5dc'];
   const key = document.body.dataset.storageKey || 'ga2-little-connections-v1';
   const radius = 82;
+  const nodeScale = n => n.scale ?? 1;
+  const nodeRadius = n => radius * nodeScale(n);
   let state = { version: 1, title: 'untitled possibilities', nodes: [], edges: [] };
   let view = { x: 0, y: 0, scale: 1 };
   let selected = null, mode = 'select', source = null, gesture = null, pendingImport = null;
@@ -21,8 +23,9 @@
     const ids = new Set();
     const nodes = input.nodes.map(n => {
       if (!n || typeof n.id !== 'string' || !n.id || n.id.length > 100 || ids.has(n.id) || typeof n.text !== 'string' || n.text.length > 500 || !/^#[0-9a-f]{6}$/i.test(n.color) || !Number.isFinite(n.x) || !Number.isFinite(n.y) || Math.abs(n.x) > 100000 || Math.abs(n.y) > 100000) throw new Error('the file contains an invalid circle.');
+      if (n.scale !== undefined && (!Number.isFinite(n.scale) || n.scale < .5 || n.scale > 2.5)) throw new Error('the file contains an invalid bubble size.');
       ids.add(n.id);
-      return { id: n.id, text: n.text, color: n.color, x: n.x, y: n.y };
+      return { id: n.id, text: n.text, color: n.color, x: n.x, y: n.y, scale: nodeScale(n) };
     });
     const pairs = new Set();
     const edges = input.edges.map(e => {
@@ -83,10 +86,10 @@
   function fit() {
     if (!state.nodes.length) { view = { x: 0, y: 0, scale: 1 }; applyView(); return; }
     const r = $('viewport').getBoundingClientRect();
-    const minX = Math.min(...state.nodes.map(n => n.x)) - radius - 35;
-    const minY = Math.min(...state.nodes.map(n => n.y)) - radius - 35;
-    const maxX = Math.max(...state.nodes.map(n => n.x)) + radius + 35;
-    const maxY = Math.max(...state.nodes.map(n => n.y)) + radius + 35;
+    const minX = Math.min(...state.nodes.map(n => n.x - nodeRadius(n))) - 35;
+    const minY = Math.min(...state.nodes.map(n => n.y - nodeRadius(n))) - 35;
+    const maxX = Math.max(...state.nodes.map(n => n.x + nodeRadius(n))) + 35;
+    const maxY = Math.max(...state.nodes.map(n => n.y + nodeRadius(n))) + 35;
     const scale = Math.max(.001, Math.min(1, (r.width - 40) / (maxX - minX), (r.height - 210) / (maxY - minY)));
     view = { scale, x: r.width / 2 - (minX + maxX) / 2 * scale, y: (r.height + 85) / 2 - (minY + maxY) / 2 * scale };
     applyView(); saveSoon();
@@ -98,9 +101,11 @@
   function updateSelection(syncText = true) {
     const n = state.nodes.find(n => n.id === selected);
     $('properties').disabled = !n;
-    $('selection-hint').textContent = n ? 'a little color goes a long way.' : 'pick a circle to edit its text and color.';
+    $('selection-hint').textContent = n ? 'a little color goes a long way.' : 'pick a circle to edit its text, color, and size.';
     if (syncText) $('node-text').value = n?.text || '';
     $('node-color').value = n?.color || colors[0];
+    $('node-scale').value = Math.round(nodeScale(n || {}) * 100);
+    $('node-scale-value').value = `${$('node-scale').value}%`;
     document.querySelectorAll('.swatch').forEach(b => b.classList.toggle('chosen', !!n && b.dataset.color === n.color));
     document.querySelectorAll('.node').forEach(el => {
       el.classList.toggle('selected', el.dataset.id === selected);
@@ -146,8 +151,9 @@
     state.edges.forEach(e => {
       const a = byId.get(e.from), b = byId.get(e.to);
       const dx = b.x - a.x, dy = b.y - a.y, length = Math.hypot(dx, dy) || 1;
-      const offset = Math.min(radius + 3, length / 3);
-      const attrs = { x1: a.x + dx / length * offset, y1: a.y + dy / length * offset, x2: b.x - dx / length * offset, y2: b.y - dy / length * offset };
+      const start = nodeRadius(a) + 3, end = nodeRadius(b) + 3;
+      const fraction = Math.min(1, length / (start + end + 1));
+      const attrs = { x1: a.x + dx / length * start * fraction, y1: a.y + dy / length * start * fraction, x2: b.x - dx / length * end * fraction, y2: b.y - dy / length * end * fraction };
       const g = svgEl('g', { class: 'edge-group', tabindex: 0, role: 'button', 'aria-label': `disconnect ${a.text || 'blank circle'} from ${b.text || 'blank circle'}` });
       const title = svgEl('title', {}); title.textContent = 'click to disconnect'; g.append(title);
       g.append(svgEl('line', { ...attrs, class: 'edge' }), svgEl('line', { ...attrs, class: 'edge-hit' }));
@@ -168,14 +174,15 @@
     // Measure the real textarea so wrapping matches the editable text exactly.
     // Padding protects glyph overhangs; extra measurement slack avoids edge clipping.
     // This rectangle sits inside the circle, leaving the rim free for dragging.
-    const maxHeight = 108;
-    const verticalBuffer = 4;
+    const scale = parseFloat(text.parentElement.style.getPropertyValue('--bubble-scale')) || 1;
+    const maxHeight = 108 * scale;
+    const verticalBuffer = 4 * scale;
     text.style.height = `${maxHeight - verticalBuffer}px`;
     const words = (text.value || text.placeholder).match(/\S+/gu) || [];
     const style = getComputedStyle(text);
     const family = style.fontFamily;
-    const safeWidth = text.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 4;
-    let low = .1, high = 64;
+    const safeWidth = text.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 4 * scale;
+    let low = .1, high = 64 * scale;
     for (let i = 0; i < 12; i++) {
       const size = (low + high) / 2;
       text.style.fontSize = `${size}px`;
@@ -195,6 +202,14 @@
     text.scrollTop = 0;
     text.scrollLeft = 0;
   }
+  function positionBubble(el, n) {
+    const r = nodeRadius(n);
+    el.style.setProperty('--bubble-scale', nodeScale(n));
+    el.style.width = `${r * 2}px`;
+    el.style.height = `${r * 2}px`;
+    el.style.left = `${n.x - r}px`;
+    el.style.top = `${n.y - r}px`;
+  }
   function render() {
     $('map-title').value = state.title;
     $('nodes').replaceChildren();
@@ -202,7 +217,7 @@
       const el = document.createElement('div');
       el.className = 'node'; el.dataset.id = n.id; el.tabIndex = 0;
       el.setAttribute('role', 'group'); el.setAttribute('aria-label', `circle: ${n.text || 'blank'}. use arrow keys to move; enter to select or connect.`);
-      el.style.left = `${n.x - radius}px`; el.style.top = `${n.y - radius}px`; el.style.background = n.color; el.style.color = ink(n.color);
+      positionBubble(el, n); el.style.background = n.color; el.style.color = ink(n.color);
       const text = document.createElement('textarea'); text.value = n.text; text.maxLength = 500; text.placeholder = 'an idea…';
       text.setAttribute('aria-label', 'circle text'); text.spellcheck = true;
       text.addEventListener('pointerdown', event => { event.stopPropagation(); choose(n.id); });
@@ -227,7 +242,7 @@
           event.preventDefault(); selected = n.id;
           const d = directions[event.key], step = event.shiftKey ? 40 : 10;
           n.x = Math.max(-100000, Math.min(100000, n.x + d[0] * step)); n.y = Math.max(-100000, Math.min(100000, n.y + d[1] * step));
-          el.style.left = `${n.x - radius}px`; el.style.top = `${n.y - radius}px`;
+          positionBubble(el, n);
           updateSelection(); drawEdges(); commit();
         }
       });
@@ -242,10 +257,10 @@
     if (state.nodes.length + texts.length > 200) { notify('this notebook holds up to 200 circles. try a smaller list.'); return; }
     if (state.edges.length + texts.length - (state.nodes.length ? 0 : 1) > 3000) { notify('remove some connections before adding more concepts.'); return; }
     let previous = state.nodes.at(-1);
-    const baseY = state.nodes.length ? Math.max(...state.nodes.map(n => n.y)) + 240 : 0;
+    const baseY = state.nodes.length ? Math.max(...state.nodes.map(n => n.y + nodeRadius(n))) + radius + 76 : 0;
     texts.forEach((text, i) => {
       const row = Math.floor(i / 4), col = row % 2 ? 3 - i % 4 : i % 4;
-      const n = { id: uid(), text, color: colors[(state.nodes.length) % colors.length], x: col * 235, y: baseY + row * 235 };
+      const n = { id: uid(), text, color: colors[(state.nodes.length) % colors.length], x: col * 235, y: baseY + row * 235, scale: 1 };
       if (previous) state.edges.push({ from: previous.id, to: n.id });
       state.nodes.push(n); previous = n;
     });
@@ -266,7 +281,7 @@
       const p = point(event.clientX, event.clientY), n = state.nodes.find(n => n.id === gesture.id);
       n.x = Math.max(-100000, Math.min(100000, gesture.x + p.x - gesture.px)); n.y = Math.max(-100000, Math.min(100000, gesture.y + p.y - gesture.py));
       const el = [...$('nodes').children].find(el => el.dataset.id === n.id);
-      el.style.left = `${n.x - radius}px`; el.style.top = `${n.y - radius}px`; drawEdges();
+      positionBubble(el, n); drawEdges();
     }
   });
   function endGesture() {
@@ -307,6 +322,23 @@
   });
   $('node-color').addEventListener('input', event => setColor(event.target.value));
   $('node-color').addEventListener('change', commit);
+  function resizeBubble(n, scale) {
+    n.scale = scale;
+    const el = [...$('nodes').children].find(el => el.dataset.id === n.id);
+    positionBubble(el, n);
+    fitBubbleText(el.querySelector('textarea'));
+  }
+  $('node-scale').addEventListener('input', event => {
+    const n = state.nodes.find(n => n.id === selected); if (!n) return;
+    resizeBubble(n, Number(event.target.value) / 100);
+    updateSelection(false); drawEdges(); saveSoon();
+  });
+  $('node-scale').addEventListener('change', commit);
+  $('scale-all').onclick = () => {
+    const scale = Number($('node-scale').value) / 100;
+    state.nodes.forEach(n => resizeBubble(n, scale));
+    drawEdges(); commit(); notify(`all bubbles set to ${Math.round(scale * 100)}%.`);
+  };
   function deleteSelected() {
     if (!selected) return;
     state.nodes = state.nodes.filter(n => n.id !== selected); state.edges = state.edges.filter(e => e.from !== selected && e.to !== selected);

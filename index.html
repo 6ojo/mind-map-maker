@@ -27,11 +27,14 @@
     </section>
     <section id="inspector">
       <h2><span>02</span> make it yours</h2>
-      <p id="selection-hint" class="small">pick a circle to edit its text and color.</p>
+      <p id="selection-hint" class="small">pick a circle to edit its text, color, and size.</p>
       <fieldset id="properties" disabled>
         <label for="node-text">circle text</label><textarea id="node-text" rows="3" maxlength="500" placeholder="what’s the idea?"></textarea>
         <label>circle color</label><div id="palette" class="palette"></div>
         <label class="custom-color">mix your own <input type="color" id="node-color" value="#e3eacb" aria-label="custom circle color"></label>
+        <label for="node-scale" class="bubble-size">bubble size <output id="node-scale-value" for="node-scale">100%</output></label>
+        <input id="node-scale" type="range" min="50" max="250" step="5" value="100" aria-label="bubble size">
+        <button id="scale-all" class="scale-all">apply this size to all bubbles</button>
         <button id="delete" class="danger">⌫ remove circle</button>
       </fieldset>
     </section>
