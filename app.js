@@ -38,6 +38,7 @@
     clearTimeout(saveTimer);
     try {
       localStorage.setItem(key, JSON.stringify({ ...state, view }));
+      if ($('initial-map')) localStorage.setItem(`${key}:initial-map-loaded`, '1');
       storageOK = true;
       $('save-status').textContent = '✓ saved in this browser';
     } catch {
@@ -351,14 +352,31 @@
   $('confirm-dialog').addEventListener('cancel', () => { pendingImport = null; });
   window.addEventListener('pagehide', persist);
   let fitInitialMap = false;
+  let starter = null, savedRaw = null, starterLoaded = false;
+  // Starter maps must load even when a browser blocks local-file storage.
   try {
-    const raw = localStorage.getItem(key) || $('initial-map')?.textContent;
-    fitInitialMap = !!raw && !localStorage.getItem(key) && !!$('initial-map');
-    if (raw) {
-      const saved = JSON.parse(raw); state = validate(saved);
-      if (saved.view && Number.isFinite(saved.view.x) && Number.isFinite(saved.view.y) && Number.isFinite(saved.view.scale) && saved.view.scale >= .001 && saved.view.scale <= 2) view = { x: saved.view.x, y: saved.view.y, scale: saved.view.scale };
-    }
-  } catch { notify('couldn’t restore the saved map. open a downloaded copy if you have one.'); }
+    if ($('initial-map')) starter = validate(JSON.parse($('initial-map').textContent));
+  } catch { notify('the starter map could not be read. open the editable json copy.'); }
+  try {
+    savedRaw = localStorage.getItem(key);
+    starterLoaded = localStorage.getItem(`${key}:initial-map-loaded`) === '1';
+  } catch { storageOK = false; }
+  let saved = null;
+  try {
+    if (savedRaw) saved = JSON.parse(savedRaw);
+    if (saved) state = validate(saved);
+  } catch {
+    saved = null;
+    notify('couldn’t restore the saved map. using the starter ideas where available.');
+  }
+  // Repair an empty autosave made before starter-map initialization was supported.
+  // Once initialized, intentionally emptied maps remain empty on future reloads.
+  if (starter && (!saved || (!state.nodes.length && !starterLoaded))) {
+    state = starter;
+    fitInitialMap = true;
+  } else if (saved?.view && Number.isFinite(saved.view.x) && Number.isFinite(saved.view.y) && Number.isFinite(saved.view.scale) && saved.view.scale >= .001 && saved.view.scale <= 2) {
+    view = { x: saved.view.x, y: saved.view.y, scale: saved.view.scale };
+  }
   render();
   if (fitInitialMap) fit();
   commit();

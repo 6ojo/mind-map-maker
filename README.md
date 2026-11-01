@@ -27,3 +27,4 @@ limits: 200 bubbles, 500 characters per bubble, and 3,000 connections. imported 
 - bubble text automatically grows or shrinks to fit, keeping words intact.
 - text has safe margins to protect letters from clipping.
 - optional embedded starter maps can use an independent autosave key.
+- starter maps load even when browser storage is blocked or an older empty save exists.
