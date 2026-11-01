@@ -34,3 +34,9 @@ limits: 200 bubbles, 500 characters per bubble, and 3,000 connections. imported 
 - change color and size for the entire selection, or drag a selected bubble’s rim to move the selection together.
 - under **saved groups**, name a selection and save it. click its name later to recall it; × removes only the group. groups persist in browser saves and exported maps.
 - escape clears the selection or cancels an unfinished box. deleting bubbles also updates saved group memberships; undo restores them.
+
+## editor layout
+
+**ideas**, **selection**, and **groups** tabs keep the tool panel focused on the current task. selecting circles opens their selection controls. on tablet and phone screens, **tools** opens the same controls as a bottom sheet; the canvas stays visible first. escape closes the sheet, and its keyboard focus stays inside while it is open.
+
+all fonts and icons are local or drawn in the page. the app still works directly from `index.html`, with no build step or network connection.

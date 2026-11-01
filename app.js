@@ -15,6 +15,53 @@
   let history = [], historyIndex = -1, toastTimer, saveTimer, storageOK = true;
   const uid = () => globalThis.crypto?.randomUUID?.() || `n-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const snapshot = () => JSON.stringify(state);
+  let activePanel = 'ideas';
+  const compactScreen = window.matchMedia('(max-width: 900px)');
+  const panelIds = { ideas: 'concept-panel', selection: 'inspector', groups: 'saved-groups' };
+  function activatePanel(name) {
+    activePanel = name;
+    Object.entries(panelIds).forEach(([panel, id]) => {
+      $(id).hidden = panel !== name;
+      const tab = $(`tab-${panel}`);
+      tab.setAttribute('aria-selected', panel === name);
+      tab.tabIndex = panel === name ? 0 : -1;
+    });
+  }
+  function setToolsOpen(open) {
+    const wasOpen = document.body.classList.contains('tools-open');
+    const show = !!open && compactScreen.matches;
+    document.body.classList.toggle('tools-open', show);
+    $('panel-backdrop').hidden = !show;
+    $('panel-toggle').setAttribute('aria-expanded', show);
+    document.querySelector('.app-header').inert = show;
+    document.querySelector('.workspace').inert = show;
+    if (show) { $('tool-panel').setAttribute('role', 'dialog'); $('tool-panel').setAttribute('aria-modal', 'true'); }
+    else { $('tool-panel').removeAttribute('role'); $('tool-panel').removeAttribute('aria-modal'); }
+    if (show) $(`tab-${activePanel}`).focus();
+    else if (wasOpen && compactScreen.matches) $('panel-toggle').focus();
+  }
+  Object.keys(panelIds).forEach(name => {
+    const tab = $(`tab-${name}`);
+    tab.addEventListener('click', () => activatePanel(name));
+    tab.addEventListener('keydown', event => {
+      const names = Object.keys(panelIds), index = names.indexOf(name);
+      const next = event.key === 'ArrowRight' ? names[(index + 1) % names.length] : event.key === 'ArrowLeft' ? names[(index + names.length - 1) % names.length] : event.key === 'Home' ? names[0] : event.key === 'End' ? names.at(-1) : null;
+      if (next) { event.preventDefault(); activatePanel(next); $(`tab-${next}`).focus(); }
+    });
+  });
+  $('panel-toggle').onclick = () => setToolsOpen(!document.body.classList.contains('tools-open'));
+  $('panel-close').onclick = () => setToolsOpen(false);
+  $('panel-backdrop').onclick = () => setToolsOpen(false);
+  compactScreen.addEventListener('change', () => setToolsOpen(false));
+  $('tool-panel').addEventListener('keydown', event => {
+    if (event.key !== 'Tab' || !document.body.classList.contains('tools-open')) return;
+    const controls = [...$('tool-panel').querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),[tabindex="0"]')].filter(el => el.getClientRects().length && el.tabIndex >= 0);
+    const first = controls[0], last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  });
+  $('start').onclick = () => { activatePanel('ideas'); setToolsOpen(true); $('concepts').focus(); };
+
   function notify(message) {
     $('toast').textContent = message;
     $('toast').classList.add('show');
@@ -53,7 +100,7 @@
       localStorage.setItem(key, JSON.stringify({ ...state, view }));
       if ($('initial-map')) localStorage.setItem(`${key}:initial-map-loaded`, '1');
       storageOK = true;
-      $('save-status').textContent = '✓ saved in this browser';
+      $('save-status').textContent = 'saved in this browser';
     } catch {
       storageOK = false;
       $('save-status').textContent = 'autosave unavailable · save a copy';
@@ -119,8 +166,9 @@
     $('node-scale').value = Math.round(nodeScale(n || {}) * 100);
     const sameSize = chosen.every(item => nodeScale(item) === nodeScale(n));
     $('node-scale-value').value = count && !sameSize ? 'mixed' : `${$('node-scale').value}%`;
-    $('delete').textContent = count > 1 ? `⌫ remove ${count} bubbles` : '⌫ remove circle';
+    $('delete').textContent = count > 1 ? `remove ${count} bubbles` : 'remove circle';
     $('group-name').disabled = !count;
+    $('group-name').placeholder = count ? 'name this selection' : 'select circles first';
     $('save-group').disabled = !count;
     document.querySelectorAll('.swatch').forEach(b => b.classList.toggle('chosen', !!count && chosen.every(item => b.dataset.color === item.color)));
     document.querySelectorAll('.node').forEach(el => {
@@ -141,7 +189,7 @@
       recall.title = 'select these bubbles';
       const active = group.nodeIds.length === selectedIds.size && group.nodeIds.every(id => selectedIds.has(id));
       recall.classList.toggle('active', active); recall.setAttribute('aria-pressed', active);
-      recall.onclick = () => { selectNodes(group.nodeIds); setMode('select'); notify(`${group.name}: ${group.nodeIds.length} bubbles selected.`); };
+      recall.onclick = () => { selectNodes(group.nodeIds); setMode('select'); activatePanel('selection'); notify(`${group.name}: ${group.nodeIds.length} bubbles selected.`); };
       const remove = document.createElement('button'); remove.textContent = '×'; remove.className = 'remove-group';
       remove.setAttribute('aria-label', `remove saved group ${group.name}; keep its bubbles`);
       remove.title = 'remove group; keep bubbles';
@@ -180,6 +228,7 @@
       }
     }
     updateSelection();
+    if (selectedIds.size) activatePanel('selection');
   }
   function svgEl(tag, attrs) {
     const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -370,6 +419,7 @@
         if (gesture.targetId) choose(gesture.targetId, true); else if (!gesture.additive) selectNodes([]);
       }
       $('selection-box').hidden = true; $('viewport').classList.remove('box-selecting'); updateSelection();
+      if (selectedIds.size) activatePanel('selection');
     } else {
       if (!gesture.moved && gesture.button === 0) { selectNodes([]); updateSelection(); }
       saveSoon();
@@ -385,10 +435,10 @@
   $('generate').onclick = () => {
     const texts = $('concepts').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     const before = state.nodes.length; addConcepts(texts);
-    if (state.nodes.length > before) $('concepts').value = '';
+    if (state.nodes.length > before) { $('concepts').value = ''; setToolsOpen(false); }
   };
-  $('add').onclick = () => { addConcepts(['']); const text = [...$('nodes').children].find(el => el.dataset.id === selected)?.querySelector('textarea'); text?.focus(); };
-  $('example').onclick = () => addConcepts(['a big idea', 'a useful detail', 'a new possibility', 'something to explore']);
+  $('add').onclick = () => { addConcepts(['']); const text = [...$('nodes').children].find(el => el.dataset.id === selected)?.querySelector('textarea'); setToolsOpen(false); text?.focus(); };
+  $('example').onclick = () => { addConcepts(['a big idea', 'a useful detail', 'a new possibility', 'something to explore']); setToolsOpen(false); };
   $('select').onclick = () => setMode('select'); $('connect').onclick = () => setMode(mode === 'connect' ? 'select' : 'connect');
   $('zoom-in').onclick = () => zoom(1.2); $('zoom-out').onclick = () => zoom(1 / 1.2); $('fit').onclick = fit;
   $('node-text').addEventListener('input', () => {
@@ -456,6 +506,7 @@
   $('map-title').addEventListener('change', commit);
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') {
+      if (document.body.classList.contains('tools-open')) { setToolsOpen(false); return; }
       if (gesture?.type === 'box') { selectNodes(gesture.previous); gesture = null; $('selection-box').hidden = true; $('viewport').classList.remove('box-selecting'); }
       else selectNodes([]);
       setMode('select'); return;
@@ -473,7 +524,7 @@
   $('import').onclick = () => $('file').click();
   function finishImport() {
     if (!pendingImport) return;
-    state = pendingImport; pendingImport = null; selectNodes([]); setMode('select'); render(); fit(); commit(); notify('map opened. your ideas are all here.');
+    state = pendingImport; pendingImport = null; selectNodes([]); setMode('select'); render(); fit(); commit(); setToolsOpen(false); notify('map opened. your ideas are all here.');
   }
   $('file').addEventListener('change', async event => {
     const file = event.target.files[0]; event.target.value = ''; if (!file) return;

@@ -3,61 +3,76 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f8f5ed">
-  <meta name="description" content="a little notebook for big ideas. turn a list into an editable concept map.">
-  <title>little connections · concept map</title>
+  <meta name="theme-color" content="#eef1ed">
+  <meta name="description" content="a little notebook for connected ideas. an offline concept map editor.">
+  <title>little connections · concept map maker</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="app.js"></script>
 </head>
 <body>
-<header>
-  <div class="brand"><svg viewBox="0 0 58 44" aria-hidden="true"><path d="M21 22L39 22"/><circle cx="17" cy="22" r="14" fill="#e3eacb"/><circle cx="42" cy="22" r="12" fill="#f1c6b7"/></svg><div><h1>little connections<span>✳</span></h1><p>a little notebook for big ideas</p></div></div>
-  <div class="file-actions"><span id="save-status" role="status">ready when you are</span><button id="import">↥ <span>open map</span></button><button id="export" class="ink">↧ <span>save a copy</span></button><input id="file" type="file" accept=".json,application/json" hidden></div>
+<header class="app-header">
+  <div class="brand"><svg viewBox="0 0 58 44" aria-hidden="true"><path d="M21 22L39 22"/><circle cx="17" cy="22" r="14"/><circle cx="42" cy="22" r="12"/></svg><h1>little connections</h1><span class="product-type">concept map maker</span></div>
+  <div class="file-actions"><span id="save-status" role="status">ready when you are</span>
+    <button id="panel-toggle" aria-label="map tools" aria-controls="tool-panel" aria-expanded="false"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>tools</span></button>
+    <button id="import" aria-label="open map"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M3 7h6l2 2h10l-3 11H3z"/><path d="M3 7V4h6l2 3"/></svg><span>open map</span></button>
+    <button id="export" aria-label="save a copy"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 15v5h16v-5"/></svg><span>save a copy</span></button>
+    <input id="file" type="file" accept=".json,application/json" hidden>
+  </div>
 </header>
 <main>
-  <aside>
-    <div class="eyebrow">your thinking space / notebook</div>
-    <section>
-      <h2><span>01</span> start with a list</h2>
-      <label for="concepts">one concept per line</label>
-      <textarea id="concepts" rows="6" placeholder="a big idea&#10;a useful detail&#10;another possibility&#10;something to explore" maxlength="40000"></textarea>
-      <p class="small">we’ll join them in a chain. you take it from there.</p>
-      <button id="generate" class="primary">add to canvas <span>↗</span></button>
-      <div class="or"><span>or</span><button id="add">＋ add a blank circle</button></div>
-    </section>
-    <section id="inspector">
-      <h2><span>02</span> make it yours</h2>
-      <p id="selection-hint" class="small">ctrl-drag a box to select bubbles, or click one to edit it.</p>
-      <fieldset id="properties" disabled>
-        <label for="node-text">circle text</label><textarea id="node-text" rows="3" maxlength="500" placeholder="what’s the idea?"></textarea>
-        <label>circle color</label><div id="palette" class="palette"></div>
-        <label class="custom-color">mix your own <input type="color" id="node-color" value="#e3eacb" aria-label="custom circle color"></label>
-        <label for="node-scale" class="bubble-size">bubble size <output id="node-scale-value" for="node-scale">100%</output></label>
-        <input id="node-scale" type="range" min="50" max="250" step="5" value="100" aria-label="bubble size">
-        <button id="scale-all" class="scale-all">apply this size to all bubbles</button>
-        <button id="delete" class="danger">⌫ remove circle</button>
-      </fieldset>
-    </section>
-    <section id="saved-groups">
-      <h2><span>03</span> saved groups</h2>
-      <label for="group-name">save the current selection</label>
-      <div class="group-create"><input id="group-name" maxlength="80" placeholder="a name for these ideas" disabled><button id="save-group" disabled>save</button></div>
-      <p id="groups-empty" class="small">select some bubbles, give them a name, and keep them handy here.</p>
-      <ul id="group-list" aria-label="saved selection groups"></ul>
-    </section>
-    <div class="note"><span class="tape"></span><strong>a few little pointers</strong><p>middle-drag to pan the canvas.<br>ctrl-drag around bubbles to select.<br>ctrl-click to add or remove one.<br>drag a selected rim to move the set.<br>click a line to snip it.</p></div>
+  <aside id="tool-panel" aria-label="map tools">
+    <div class="panel-heading"><h2>map tools</h2><button id="panel-close" class="icon-button" aria-label="close tools"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div class="panel-tabs" role="tablist" aria-label="map tool panels">
+      <button id="tab-ideas" role="tab" aria-selected="true" aria-controls="concept-panel" tabindex="0" data-panel="ideas">ideas</button>
+      <button id="tab-selection" role="tab" aria-selected="false" aria-controls="inspector" tabindex="-1" data-panel="selection">selection</button>
+      <button id="tab-groups" role="tab" aria-selected="false" aria-controls="saved-groups" tabindex="-1" data-panel="groups">groups</button>
+    </div>
+    <div class="panel-content">
+      <section id="concept-panel" role="tabpanel" aria-labelledby="tab-ideas">
+        <h2>start with your ideas</h2>
+        <label for="concepts">one concept per line</label>
+        <textarea id="concepts" rows="5" placeholder="a big idea&#10;a useful detail&#10;another possibility" maxlength="40000" aria-describedby="concept-help"></textarea>
+        <p id="concept-help" class="small">each idea becomes a circle. we’ll connect them in order.</p>
+        <button id="generate" class="primary"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>add to canvas</button>
+        <button id="add" class="secondary full"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>add a blank circle</button>
+        <div class="panel-tip"><h3>room to think</h3><p>arrange your circles, draw connections, and keep useful selections as named groups.</p></div>
+      </section>
+      <section id="inspector" role="tabpanel" aria-labelledby="tab-selection" hidden>
+        <h2>shape the selection</h2>
+        <p id="selection-hint" class="small">select a circle, or ctrl-drag around a set.</p>
+        <fieldset id="properties" disabled>
+          <label for="node-text">circle text</label><textarea id="node-text" rows="3" maxlength="500" placeholder="select a circle to edit its text"></textarea>
+          <label>circle color</label><div id="palette" class="palette" role="group" aria-label="circle colors"></div>
+          <label class="custom-color">custom color <input type="color" id="node-color" value="#e3eacb" aria-label="custom circle color"></label>
+          <label for="node-scale" class="bubble-size">bubble size <output id="node-scale-value" for="node-scale">100%</output></label>
+          <input id="node-scale" type="range" min="50" max="250" step="5" value="100" aria-label="bubble size">
+          <button id="scale-all" class="secondary full">apply size to all bubbles</button>
+          <button id="delete" class="danger full">remove circle</button>
+        </fieldset>
+      </section>
+      <section id="saved-groups" role="tabpanel" aria-labelledby="tab-groups" hidden>
+        <h2>keep a selection</h2>
+        <p class="small">save a set of circles. select it again whenever you need it.</p>
+        <label for="group-name">group name</label>
+        <div class="group-create"><input id="group-name" maxlength="80" placeholder="select circles first" disabled><button id="save-group" disabled>save</button></div>
+        <p id="groups-empty" class="small empty-groups">no saved groups yet.</p>
+        <ul id="group-list" aria-label="saved selection groups"></ul>
+      </section>
+    </div>
+    <p class="local-note">your maps stay in this browser.<br>save a copy to keep or share them.</p>
   </aside>
   <section class="workspace" aria-label="concept map workspace">
     <div class="canvas-top"><input id="map-title" aria-label="map title" value="untitled possibilities" maxlength="100"><span id="counts">0 ideas · 0 connections</span></div>
-    <div class="tools" role="toolbar" aria-label="map tools"><button id="select" class="active" aria-pressed="true">↖ select</button><button id="connect" aria-pressed="false">⤳ connect</button><i></i><button id="undo" aria-label="undo" title="undo (ctrl/cmd+z)" disabled>↶</button><button id="redo" aria-label="redo" title="redo (ctrl/cmd+shift+z)" disabled>↷</button></div>
-    <div id="viewport" tabindex="0" aria-label="map canvas. middle-drag to pan. ctrl-drag a box around bubbles to select them. use the zoom buttons to zoom.">
+    <div class="tools" role="toolbar" aria-label="map tools"><button id="select" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="m5 3 14 10-7 1-3 7z"/></svg>select</button><button id="connect" aria-pressed="false"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 5h6a4 4 0 0 1 4 4v6a4 4 0 0 0 2 2"/></svg>connect</button><span class="tool-divider"></span><button id="undo" class="icon-button" aria-label="undo" title="undo (ctrl/cmd+z)" disabled><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="m9 5-5 5 5 5M4 10h10a6 6 0 0 1 6 6v3"/></svg></button><button id="redo" class="icon-button" aria-label="redo" title="redo (ctrl/cmd+shift+z)" disabled><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="m15 5 5 5-5 5M20 10H10a6 6 0 0 0-6 6v3"/></svg></button></div>
+    <div id="viewport" tabindex="0" aria-label="map canvas. middle-drag to pan. ctrl-drag around circles to select them.">
       <div id="world"><svg id="edges" aria-label="connections"></svg><div id="nodes"></div></div>
       <div id="selection-box" class="selection-box" hidden aria-hidden="true"></div>
-      <div id="empty"><div class="doodle" aria-hidden="true"><span>an idea</span><b>⤳</b><span>another!</span></div><h2>give your ideas some room.</h2><p>drop a list on the left, then move things around.<br>the good connections tend to show up.</p><button id="example">try a tiny example ↗</button></div>
+      <div id="empty"><h2>make room for<br>connected ideas.</h2><p>start with a list. move things around.<br>see what belongs together.</p><button id="start">add your concepts</button><button id="example">or try a small example</button></div>
     </div>
-    <div class="canvas-bottom"><span id="mode-hint">middle-drag to pan · ctrl-drag to select</span><div class="zoom"><button id="zoom-out" aria-label="zoom out">−</button><output id="zoom-level">100%</output><button id="zoom-in" aria-label="zoom in">＋</button><button id="fit" title="fit all circles on screen">⊡ fit</button></div></div>
+    <div class="canvas-bottom"><div class="canvas-help"><details class="shortcuts"><summary>controls</summary><div><p><kbd>middle drag</kbd> pan the canvas</p><p><kbd>ctrl + drag</kbd> box select</p><p><kbd>ctrl + click</kbd> add to a selection</p><p><kbd>esc</kbd> clear selection</p><p>drag a circle’s rim to move it.<br>click a line to disconnect it.</p></div></details><span id="mode-hint">middle-drag to pan · ctrl-drag to select</span></div><div class="zoom"><button id="zoom-out" class="icon-button" aria-label="zoom out"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M4 12h16"/></svg></button><output id="zoom-level" aria-label="zoom level">100%</output><button id="zoom-in" class="icon-button" aria-label="zoom in"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg></button><button id="fit" title="fit all circles on screen"><svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m6 0h6v-6"/></svg>fit</button></div></div>
   </section>
 </main>
+<button id="panel-backdrop" tabindex="-1" aria-label="close map tools" hidden></button>
 <div id="toast" role="status" aria-live="polite"></div>
 <dialog id="confirm-dialog"><h2>open this map?</h2><p>this replaces the canvas. save a copy of your current map first if you want to keep it.</p><div><button id="cancel-open">keep this map</button><button id="confirm-open" class="primary">open new map</button></div></dialog>
 </body>

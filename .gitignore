@@ -16,3 +16,8 @@ desktop.ini
 20-ideas.json
 20-ideas-preview.html
 maps/
+
+# local design inspection artifacts
+.taste-skill/
+development.md
+DEVELOPMENT.md
