@@ -165,24 +165,32 @@
   const bubbleMeasure = document.createElement('canvas').getContext('2d');
   function fitBubbleText(text) {
     // Measure the real textarea so wrapping matches the editable text exactly.
+    // Padding protects glyph overhangs; extra measurement slack avoids edge clipping.
     // This rectangle sits inside the circle, leaving the rim free for dragging.
     const maxHeight = 108;
-    text.style.height = `${maxHeight}px`;
+    const verticalBuffer = 4;
+    text.style.height = `${maxHeight - verticalBuffer}px`;
     const words = (text.value || text.placeholder).match(/\S+/gu) || [];
-    const family = getComputedStyle(text).fontFamily;
+    const style = getComputedStyle(text);
+    const family = style.fontFamily;
+    const safeWidth = text.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 4;
     let low = .1, high = 64;
     for (let i = 0; i < 12; i++) {
       const size = (low + high) / 2;
       text.style.fontSize = `${size}px`;
       bubbleMeasure.font = `${size}px ${family}`;
-      const wordsFit = words.every(word => bubbleMeasure.measureText(word).width <= text.clientWidth - 1);
+      const wordsFit = words.every(word => {
+        const measured = bubbleMeasure.measureText(word);
+        const inkWidth = measured.actualBoundingBoxLeft + measured.actualBoundingBoxRight;
+        return Math.max(measured.width, inkWidth) <= safeWidth;
+      });
       if (wordsFit && text.scrollHeight <= text.clientHeight && text.scrollWidth <= text.clientWidth) low = size;
       else high = size;
     }
     text.style.fontSize = `${Math.floor(low * 10) / 10}px`;
     // Shrink the editor to its content so both single and multiline labels center.
     text.style.height = '0px';
-    text.style.height = `${Math.min(maxHeight, Math.max(1, text.scrollHeight))}px`;
+    text.style.height = `${Math.min(maxHeight, Math.max(1, text.scrollHeight + verticalBuffer))}px`;
     text.scrollTop = 0;
     text.scrollLeft = 0;
   }

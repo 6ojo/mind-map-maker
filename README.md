@@ -25,3 +25,4 @@ limits: 200 bubbles, 500 characters per bubble, and 3,000 connections. imported 
 ## additional controls
 
 - bubble text automatically grows or shrinks to fit, keeping words intact.
+- text has safe margins to protect letters from clipping.
