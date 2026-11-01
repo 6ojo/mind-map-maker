@@ -27,7 +27,7 @@
     </section>
     <section id="inspector">
       <h2><span>02</span> make it yours</h2>
-      <p id="selection-hint" class="small">pick a circle to edit its text, color, and size.</p>
+      <p id="selection-hint" class="small">ctrl-drag a box to select bubbles, or click one to edit it.</p>
       <fieldset id="properties" disabled>
         <label for="node-text">circle text</label><textarea id="node-text" rows="3" maxlength="500" placeholder="what’s the idea?"></textarea>
         <label>circle color</label><div id="palette" class="palette"></div>
@@ -38,16 +38,24 @@
         <button id="delete" class="danger">⌫ remove circle</button>
       </fieldset>
     </section>
-    <div class="note"><span class="tape"></span><strong>a few little pointers</strong><p>drag a circle’s rim to move it.<br>type right inside to edit.<br>click a line to snip it.<br>use “connect” to join two ideas.</p></div>
+    <section id="saved-groups">
+      <h2><span>03</span> saved groups</h2>
+      <label for="group-name">save the current selection</label>
+      <div class="group-create"><input id="group-name" maxlength="80" placeholder="a name for these ideas" disabled><button id="save-group" disabled>save</button></div>
+      <p id="groups-empty" class="small">select some bubbles, give them a name, and keep them handy here.</p>
+      <ul id="group-list" aria-label="saved selection groups"></ul>
+    </section>
+    <div class="note"><span class="tape"></span><strong>a few little pointers</strong><p>middle-drag to pan the canvas.<br>ctrl-drag around bubbles to select.<br>ctrl-click to add or remove one.<br>drag a selected rim to move the set.<br>click a line to snip it.</p></div>
   </aside>
   <section class="workspace" aria-label="concept map workspace">
     <div class="canvas-top"><input id="map-title" aria-label="map title" value="untitled possibilities" maxlength="100"><span id="counts">0 ideas · 0 connections</span></div>
     <div class="tools" role="toolbar" aria-label="map tools"><button id="select" class="active" aria-pressed="true">↖ select</button><button id="connect" aria-pressed="false">⤳ connect</button><i></i><button id="undo" aria-label="undo" title="undo (ctrl/cmd+z)" disabled>↶</button><button id="redo" aria-label="redo" title="redo (ctrl/cmd+shift+z)" disabled>↷</button></div>
-    <div id="viewport" tabindex="0" aria-label="map canvas. drag the paper to pan; use the zoom buttons to zoom.">
+    <div id="viewport" tabindex="0" aria-label="map canvas. middle-drag to pan. ctrl-drag a box around bubbles to select them. use the zoom buttons to zoom.">
       <div id="world"><svg id="edges" aria-label="connections"></svg><div id="nodes"></div></div>
+      <div id="selection-box" class="selection-box" hidden aria-hidden="true"></div>
       <div id="empty"><div class="doodle" aria-hidden="true"><span>an idea</span><b>⤳</b><span>another!</span></div><h2>give your ideas some room.</h2><p>drop a list on the left, then move things around.<br>the good connections tend to show up.</p><button id="example">try a tiny example ↗</button></div>
     </div>
-    <div class="canvas-bottom"><span id="mode-hint">drag the paper to explore</span><div class="zoom"><button id="zoom-out" aria-label="zoom out">−</button><output id="zoom-level">100%</output><button id="zoom-in" aria-label="zoom in">＋</button><button id="fit" title="fit all circles on screen">⊡ fit</button></div></div>
+    <div class="canvas-bottom"><span id="mode-hint">middle-drag to pan · ctrl-drag to select</span><div class="zoom"><button id="zoom-out" aria-label="zoom out">−</button><output id="zoom-level">100%</output><button id="zoom-in" aria-label="zoom in">＋</button><button id="fit" title="fit all circles on screen">⊡ fit</button></div></div>
   </section>
 </main>
 <div id="toast" role="status" aria-live="polite"></div>

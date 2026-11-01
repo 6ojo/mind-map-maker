@@ -29,3 +29,8 @@ limits: 200 bubbles, 500 characters per bubble, and 3,000 connections. imported 
 - optional embedded starter maps can use an independent autosave key.
 - starter maps load even when browser storage is blocked or an older empty save exists.
 - select a bubble and use **bubble size** (50%–250%); **apply this size to all bubbles** changes the whole map. text and connecting lines resize automatically, and sizes survive export/import.
+- middle-drag anywhere on the canvas to pan.
+- ctrl-drag a box around bubbles to select them; bubbles must be fully inside the box. ctrl + shift + drag adds to the selection. ctrl-click toggles individual bubbles.
+- change color and size for the entire selection, or drag a selected bubble’s rim to move the selection together.
+- under **saved groups**, name a selection and save it. click its name later to recall it; × removes only the group. groups persist in browser saves and exported maps.
+- escape clears the selection or cancels an unfinished box. deleting bubbles also updates saved group memberships; undo restores them.
