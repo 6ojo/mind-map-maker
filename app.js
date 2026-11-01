@@ -162,6 +162,30 @@
     $('counts').textContent = `${state.nodes.length} ${state.nodes.length === 1 ? 'idea' : 'ideas'} · ${state.edges.length} ${state.edges.length === 1 ? 'connection' : 'connections'}`;
     $('empty').hidden = state.nodes.length > 0;
   }
+  const bubbleMeasure = document.createElement('canvas').getContext('2d');
+  function fitBubbleText(text) {
+    // Measure the real textarea so wrapping matches the editable text exactly.
+    // This rectangle sits inside the circle, leaving the rim free for dragging.
+    const maxHeight = 108;
+    text.style.height = `${maxHeight}px`;
+    const words = (text.value || text.placeholder).match(/\S+/gu) || [];
+    const family = getComputedStyle(text).fontFamily;
+    let low = .1, high = 64;
+    for (let i = 0; i < 12; i++) {
+      const size = (low + high) / 2;
+      text.style.fontSize = `${size}px`;
+      bubbleMeasure.font = `${size}px ${family}`;
+      const wordsFit = words.every(word => bubbleMeasure.measureText(word).width <= text.clientWidth - 1);
+      if (wordsFit && text.scrollHeight <= text.clientHeight && text.scrollWidth <= text.clientWidth) low = size;
+      else high = size;
+    }
+    text.style.fontSize = `${Math.floor(low * 10) / 10}px`;
+    // Shrink the editor to its content so both single and multiline labels center.
+    text.style.height = '0px';
+    text.style.height = `${Math.min(maxHeight, Math.max(1, text.scrollHeight))}px`;
+    text.scrollTop = 0;
+    text.scrollLeft = 0;
+  }
   function render() {
     $('map-title').value = state.title;
     $('nodes').replaceChildren();
@@ -174,7 +198,7 @@
       text.setAttribute('aria-label', 'circle text'); text.spellcheck = true;
       text.addEventListener('pointerdown', event => { event.stopPropagation(); choose(n.id); });
       text.addEventListener('focus', () => { if (selected !== n.id) { selected = n.id; updateSelection(); } });
-      text.addEventListener('input', () => { n.text = text.value; if (selected === n.id) $('node-text').value = n.text; saveSoon(); });
+      text.addEventListener('input', () => { n.text = text.value; fitBubbleText(text); if (selected === n.id) $('node-text').value = n.text; saveSoon(); });
       text.addEventListener('change', () => { commit(); drawEdges(); });
       el.append(text);
       el.addEventListener('pointerdown', event => {
@@ -199,6 +223,7 @@
         }
       });
       $('nodes').append(el);
+      fitBubbleText(text);
     });
     drawEdges(); updateSelection(); applyView();
   }
@@ -258,7 +283,7 @@
   $('node-text').addEventListener('input', () => {
     const n = state.nodes.find(n => n.id === selected); if (!n) return;
     n.text = $('node-text').value;
-    const el = [...$('nodes').children].find(el => el.dataset.id === n.id); el.querySelector('textarea').value = n.text; saveSoon();
+    const el = [...$('nodes').children].find(el => el.dataset.id === n.id); const text = el.querySelector('textarea'); text.value = n.text; fitBubbleText(text); saveSoon();
   });
   $('node-text').addEventListener('change', () => { commit(); drawEdges(); });
   function setColor(color) {

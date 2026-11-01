@@ -21,3 +21,7 @@ optional: from this folder, run `python -m http.server 8765 --bind 127.0.0.1`, t
 maps autosave in the current browser. browser storage can be cleared or unavailable, so keep exported copies of maps you want to retain. the header reports when autosave is unavailable.
 
 limits: 200 bubbles, 500 characters per bubble, and 3,000 connections. imported maps are validated before replacing the canvas.
+
+## additional controls
+
+- bubble text automatically grows or shrinks to fit, keeping words intact.
